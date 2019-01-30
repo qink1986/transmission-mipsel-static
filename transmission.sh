@@ -9,31 +9,41 @@ PREFIX=/opt
 
 BASE=`pwd`
 SRC=$BASE/src
-WGET="wget --prefer-family=IPv4"
+WGET="tsocks wget --prefer-family=IPv4"
 DEST=$BASE$PREFIX
 LDFLAGS="-L$DEST/lib -Wl,--gc-sections"
 CPPFLAGS="-I$DEST/include"
 CFLAGS="-mtune=mips32 -mips32 -ffunction-sections -fdata-sections"
 CXXFLAGS=$CFLAGS
-CONFIGURE="./configure --prefix=$PREFIX --host=mipsel-linux"
+CONFIGURE="./configure --prefix=$PREFIX --host=mipsel-openwrt-linux"
 MAKE="make -j`nproc`"
 
 mkdir -p $SRC
+
+#############
+# TOOLCHAIN #
+#############
+
+$WGET http://archive.openwrt.org/barrier_breaker/14.07/ramips/mt7620a/OpenWrt-Toolchain-ramips-for-mipsel_24kec+dsp-gcc-4.8-linaro_uClibc-0.9.33.2.tar.bz2
+tar jxvf OpenWrt-Toolchain-ramips-for-mipsel_24kec+dsp-gcc-4.8-linaro_uClibc-0.9.33.2.tar.bz2
+
+TOOLCHAINE_DIR="$BASE/OpenWrt-Toolchain-ramips-for-mipsel_24kec+dsp-gcc-4.8-linaro_uClibc-0.9.33.2/toolchain-mipsel_24kec+dsp_gcc-4.8-linaro_uClibc-0.9.33.2"
+export PATH=$PATH:$TOOLCHAINE_DIR/bin
 
 ######## ####################################################################
 # ZLIB # ####################################################################
 ######## ####################################################################
 
 mkdir $SRC/zlib && cd $SRC/zlib
-$WGET http://zlib.net/zlib-1.2.8.tar.gz
-tar zxvf zlib-1.2.8.tar.gz
-cd zlib-1.2.8
+$WGET http://zlib.net/zlib-1.2.11.tar.gz
+tar zxvf zlib-1.2.11.tar.gz
+cd zlib-1.2.11
 
 LDFLAGS=$LDFLAGS \
 CPPFLAGS=$CPPFLAGS \
 CFLAGS=$CFLAGS \
 CXXFLAGS=$CXXFLAGS \
-CROSS_PREFIX=mipsel-linux- \
+CROSS_PREFIX=mipsel-openwrt-linux- \
 ./configure \
 --prefix=$PREFIX
 
@@ -55,25 +65,25 @@ cd openssl-1.0.2g
 --with-zlib-lib=$DEST/lib \
 --with-zlib-include=$DEST/include
 
-make CC=mipsel-linux-gcc
-make CC=mipsel-linux-gcc install INSTALLTOP=$DEST OPENSSLDIR=$DEST/ssl
+make CC=mipsel-openwrt-linux-gcc
+make CC=mipsel-openwrt-linux-gcc install INSTALLTOP=$DEST OPENSSLDIR=$DEST/ssl
 
 ########### #################################################################
 # GETTEXT # #################################################################
 ########### #################################################################
 
 mkdir $SRC/gettext && cd $SRC/gettext
-$WGET http://ftp.gnu.org/pub/gnu/gettext/gettext-0.19.7.tar.gz
-tar zxvf gettext-0.19.7.tar.gz
-cd gettext-0.19.7
+$WGET http://ftp.gnu.org/pub/gnu/gettext/gettext-0.19.3.tar.gz
+tar zxvf gettext-0.19.3.tar.gz
+cd gettext-0.19.3
 
 $WGET https://raw.githubusercontent.com/lancethepants/tomatoware/master/patches/gettext/spawn.patch
 patch -p1 < spawn.patch
 
 LDFLAGS="$LDFLAGS -lrt -lpthread" \
 CPPFLAGS=$CPPFLAGS \
-CFLAGS=$CFLAGS \
-CXXFLAGS=$CXXFLAGS \
+CFLAGS="$CFLAGS -ldl" \
+CXXFLAGS="$CXXFLAGS -ldl" \
 $CONFIGURE \
 --enable-static \
 --disable-shared
@@ -127,9 +137,9 @@ make install DESTDIR=$BASE
 ################ ############################################################
 
 mkdir $SRC/transmission && cd $SRC/transmission
-$WGET https://download.transmissionbt.com/files/transmission-2.92.tar.xz
-tar xvJf transmission-2.92.tar.xz
-cd transmission-2.92
+$WGET https://github.com/transmission/transmission-releases/raw/master/transmission-2.94.tar.xz
+tar xvJf transmission-2.94.tar.xz
+cd transmission-2.94
 
 ZLIB_CFLAGS="-I$DEST/include" \
 ZLIB_LIBS=-L$DEST/lib \
